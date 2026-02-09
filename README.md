@@ -22,7 +22,36 @@ VPN 模式:
 
 ## 🚀 快速开始
 
-### Docker Compose (推荐)
+### Portainer Stack (推荐)
+
+在 Portainer 中创建 Stack，粘贴以下内容：
+
+```yaml
+version: '3.8'
+
+services:
+  s5gate:
+    image: crazygao/s5gate:latest
+    container_name: s5gate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"    # WebUI
+      - "1080:1080"    # SOCKS5
+    environment:
+      - PORT=8080
+      - SOCKS5_PORT=1080
+      - SOCKS5_USER=s5user
+      # - SOCKS5_PASS=YourStrongPassword123!  # 不设置则自动生成
+      # - AUTH_TOKEN=your-webui-token         # 不设置则自动生成
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+```
+
+### Docker Compose
 
 ```bash
 cd /path/to/s5gate
@@ -35,14 +64,13 @@ docker logs s5gate
 ### Docker 直接运行
 
 ```bash
-docker build -t s5gate .
 docker run -d --name s5gate \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
   --sysctl net.ipv4.ip_forward=1 \
   -p 8080:8080 \
   -p 1080:1080 \
-  s5gate
+  crazygao/s5gate:latest
 ```
 
 ## 🔑 认证配置
