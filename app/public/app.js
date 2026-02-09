@@ -78,26 +78,33 @@ async function refreshStatus() {
         connStatusEl.textContent = '已连接';
         connStatusEl.className = 'mode-badge vpn';
         serverContainer.style.display = 'block';
-        ipContainer.style.display = 'block';
         document.getElementById('vpn-server').textContent = 
           `${vpn.server.hostName} (${vpn.server.countryShort})`;
         disconnectBtn.style.display = 'inline-block';
         vpnStatusEl.textContent = `✅ ${vpn.server.countryShort}`;
         vpnStatusEl.className = 'vpn-status connected';
         
-        // 获取 VPN IP
+        // 获取 VPN IP 详细信息
         try {
           const ipRes = await fetch('/api/ip-info');
           const ipData = await ipRes.json();
           if (ipData.success && ipData.ipInfo) {
-            document.getElementById('vpn-ip').textContent = ipData.ipInfo.ip || '-';
+            const info = ipData.ipInfo;
+            document.getElementById('vpn-ip-info').style.display = 'block';
+            document.getElementById('vpn-ip').textContent = info.ip || '-';
+            document.getElementById('vpn-location').textContent = 
+              [info.country, info.region, info.city].filter(Boolean).join(', ') || '-';
+            document.getElementById('vpn-isp').textContent = info.isp || '-';
+            document.getElementById('vpn-org').textContent = info.org || info.isp || '-';
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('Failed to get VPN IP info:', e);
+        }
       } else {
         connStatusEl.textContent = '未连接';
         connStatusEl.className = 'mode-badge direct';
         serverContainer.style.display = 'none';
-        ipContainer.style.display = 'none';
+        document.getElementById('vpn-ip-info').style.display = 'none';
         disconnectBtn.style.display = 'none';
         vpnStatusEl.textContent = '未连接';
         vpnStatusEl.className = 'vpn-status';

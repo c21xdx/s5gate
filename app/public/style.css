@@ -445,6 +445,39 @@ footer {
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* VPN IP Info */
+.vpn-ip-info {
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(0, 255, 136, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.ip-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.ip-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ip-info-item label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.ip-info-item span {
+  font-size: 0.85rem;
+  color: #00ff88;
+  word-break: break-all;
+}
+
 /* Connections */
 .connections-card .card-header {
   margin-bottom: 12px;
