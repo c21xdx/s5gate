@@ -137,7 +137,8 @@ function saveOriginalGateway() {
 }
 
 /**
- * 设置绕过路由
+ * 设置绕过路由和策略路由
+ * 使用源 IP 策略路由让直连端口绕过 VPN
  */
 function setupBypassRoutes() {
   return new Promise((resolve) => {
@@ -146,34 +147,39 @@ function setupBypassRoutes() {
       return;
     }
     
-    console.log(`[Route] Setting up bypass routes via ${originalGateway}`);
+    const config = getConfig();
+    const defaultIface = config.defaultInterface;
     
-    const bypassIPs = ['130.158.75.44', '130.158.75.45'];
-    const privateNetworks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'];
+    console.log(`[Route] Setting up policy routing via ${originalGateway}`);
     
-    exec('getent hosts www.vpngate.net 2>/dev/null | awk \'{print $1}\'', (err, stdout) => {
-      const resolvedIPs = stdout.trim().split('\n').filter(ip => ip && ip.match(/^\d/));
-      const allIPs = [...new Set([...bypassIPs, ...resolvedIPs])];
+    // 获取 eth0 IP 地址
+    exec(`ip addr show ${defaultIface} | grep "inet " | awk '{print $2}' | cut -d/ -f1`, (err, stdout) => {
+      const ethIP = stdout.trim();
       
-      let routeCommands = privateNetworks.map(net => 
-        `ip route add ${net} via ${originalGateway} 2>/dev/null || true`
-      );
-      routeCommands = routeCommands.concat(allIPs.map(ip => 
-        `ip route add ${ip}/32 via ${originalGateway} 2>/dev/null || true`
-      ));
+      const commands = [
+        // 创建路由表 100 用于直连流量
+        `ip route add default via ${originalGateway} dev ${defaultIface} table 100 2>/dev/null || true`,
+        
+        // 从 eth0 IP 出去的流量使用路由表 100（绕过 VPN）
+        `ip rule add from ${ethIP} table 100 pref 40 2>/dev/null || true`,
+        
+        // VPNGate API 绕过 VPN
+        `ip route add 130.158.75.0/24 via ${originalGateway} 2>/dev/null || true`,
+        
+        // 私有网络绕过 VPN
+        `ip route add 10.0.0.0/8 via ${originalGateway} 2>/dev/null || true`,
+        `ip route add 172.16.0.0/12 via ${originalGateway} 2>/dev/null || true`,
+        `ip route add 192.168.0.0/16 via ${originalGateway} 2>/dev/null || true`,
+      ];
       
       let completed = 0;
-      const total = routeCommands.length;
-      
-      if (total === 0) {
-        resolve();
-        return;
-      }
-      
-      routeCommands.forEach(cmd => {
-        exec(cmd, () => {
+      commands.forEach(cmd => {
+        exec(cmd, (err) => {
           completed++;
-          if (completed === total) resolve();
+          if (completed === commands.length) {
+            console.log(`[Route] Policy routing configured for ${ethIP}`);
+            resolve();
+          }
         });
       });
     });
