@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S5Gate - SOCKS5 Proxy Gateway</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔐 S5Gate</h1>
+      <p class="subtitle">SOCKS5 Proxy Gateway</p>
+    </header>
+
+    <!-- SOCKS5 配置卡片 -->
+    <div class="card socks5-card">
+      <h2>📡 SOCKS5 配置</h2>
+      <div class="config-grid">
+        <div class="config-item">
+          <label>地址</label>
+          <span id="socks5-host">-</span>
+        </div>
+        <div class="config-item">
+          <label>端口</label>
+          <span id="socks5-port">-</span>
+        </div>
+        <div class="config-item">
+          <label>用户名</label>
+          <span id="socks5-user">-</span>
+        </div>
+        <div class="config-item">
+          <label>密码</label>
+          <span id="socks5-pass" class="password">-</span>
+          <button class="btn-small" onclick="togglePassword()">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-copy" onclick="copySocks5Config()">📋 复制配置</button>
+    </div>
+
+    <!-- 连接监控卡片 -->
+    <div class="card connections-card">
+      <div class="card-header">
+        <h2>📊 当前连接</h2>
+        <span id="conn-count" class="conn-badge">0</span>
+      </div>
+      <div id="connections-list" class="connections-list">
+        <div class="no-connections">暂无连接</div>
+      </div>
+    </div>
+
+    <!-- 黑名单卡片 -->
+    <div class="card blacklist-card">
+      <div class="card-header">
+        <h2>🚫 IP 黑名单</h2>
+        <span id="blacklist-count" class="blacklist-badge">0</span>
+      </div>
+      <div class="blacklist-input">
+        <input type="text" id="block-ip-input" placeholder="输入 IP 地址">
+        <button class="btn btn-small btn-danger" onclick="blockIPManual()">封禁</button>
+      </div>
+      <div id="blacklist-list" class="blacklist-list">
+        <div class="no-blacklist">无封禁 IP</div>
+      </div>
+    </div>
+
+    <!-- 状态卡片 -->
+    <div class="card status-card">
+      <h2>📊 当前状态</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <label>模式</label>
+          <span id="current-mode" class="mode-badge">-</span>
+        </div>
+        <div class="status-item">
+          <label>出口 IP</label>
+          <span id="current-ip">-</span>
+        </div>
+        <div class="status-item">
+          <label>位置</label>
+          <span id="current-location">-</span>
+        </div>
+        <div class="status-item" id="server-info-container" style="display:none">
+          <label>节点</label>
+          <span id="current-server">-</span>
+        </div>
+      </div>
+      <div class="status-actions">
+        <button class="btn btn-refresh" onclick="refreshStatus()">🔄 刷新状态</button>
+        <button class="btn btn-disconnect" id="btn-disconnect" onclick="disconnect()" style="display:none">❌ 切换到直连</button>
+      </div>
+    </div>
+
+    <!-- VPNGate 节点列表 -->
+    <div class="card servers-card">
+      <div class="card-header">
+        <h2>🌐 VPNGate 节点</h2>
+        <button class="btn btn-small" onclick="refreshServers(true)">🔄 刷新</button>
+      </div>
+      <div class="servers-info">
+        <span id="servers-count">-</span>
+        <span id="cache-info" class="cache-info"></span>
+      </div>
+      <div id="servers-list" class="servers-list">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+      <button class="btn-link" onclick="logout()">登出</button>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

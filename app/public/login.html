@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S5Gate - 登录</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container login-container">
+    <div class="card login-card">
+      <h1>🔐 S5Gate</h1>
+      <p class="subtitle">请输入 Token 登录</p>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <input type="password" id="token" placeholder="Token" autocomplete="off" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">登录</button>
+      </form>
+      
+      <p id="error-msg" class="error-msg"></p>
+      
+      <p class="hint">查看 Docker 日志获取 Token</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = document.getElementById('token').value;
+      const errorMsg = document.getElementById('error-msg');
+      
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          const data = await res.json();
+          errorMsg.textContent = data.error || 'Token 无效';
+        }
+      } catch (err) {
+        errorMsg.textContent = '网络错误';
+      }
+    });
+  </script>
+</body>
+</html>

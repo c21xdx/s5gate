@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  s5gate:
+    build: .
+    container_name: s5gate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"    # WebUI
+      - "1080:1080"    # SOCKS5
+    environment:
+      - PORT=8080
+      - SOCKS5_PORT=1080
+      - SOCKS5_USER=s5user
+      # - SOCKS5_PASS=your-strong-password  # 不设置会自动生成
+      # - AUTH_TOKEN=your-webui-token       # WebUI 登录 token
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
