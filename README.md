@@ -83,35 +83,43 @@ docker run -d --name s5gate \
 启动时会在日志中显示:
 
 ```
-SOCKS5 Port: 1080
-SOCKS5 User: s5user
-SOCKS5 Pass: <自动生成的24位强密码>
+Direct Port: 1080
+VPN Port:    1081
+User:        s5user
+Pass:        <自动生成的24位强密码>
 ```
 
-客户端连接时使用:
-```
+客户端连接:
+```bash
+# 直连模式 (本机网络)
 socks5://s5user:密码@HOST:1080
+
+# VPN 模式 (需先在 WebUI 连接节点)
+socks5://s5user:密码@HOST:1081
 ```
 
 ### WebUI 认证
 
 访问 `http://HOST:8080/?token=YOUR_TOKEN` 自动登录。
 
-### 自定义密码
+### 自定义配置
 
 ```bash
 docker run ... \
+  -e SOCKS5_PORT_DIRECT=1080 \
+  -e SOCKS5_PORT_VPN=1081 \
   -e SOCKS5_USER="myuser" \
   -e SOCKS5_PASS="MyStrongPassword123!" \
   -e AUTH_TOKEN="my-webui-token" \
-  s5gate
+  c21xdx/s5gate
 ```
 
 ## 📊 组件说明
 
 | 组件 | 用途 | 端口 |
 |------|------|------|
-| **Dante** | SOCKS5 代理 | 0.0.0.0:1080 |
+| **Dante (Direct)** | 直连 SOCKS5 | 0.0.0.0:1080 |
+| **Dante (VPN)** | VPN SOCKS5 | 0.0.0.0:1081 |
 | **OpenVPN** | VPN 客户端 | - |
 | **Express** | WebUI 和 API | 0.0.0.0:8080 |
 
@@ -133,7 +141,8 @@ docker run ... \
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `PORT` | 8080 | WebUI 端口 |
-| `SOCKS5_PORT` | 1080 | SOCKS5 端口 |
+| `SOCKS5_PORT_DIRECT` | 1080 | 直连 SOCKS5 端口 |
+| `SOCKS5_PORT_VPN` | 1081 | VPN SOCKS5 端口 |
 | `SOCKS5_USER` | s5user | SOCKS5 用户名 |
 | `SOCKS5_PASS` | 自动生成 | SOCKS5 密码 |
 | `AUTH_TOKEN` | 自动生成 | WebUI 登录 Token |
@@ -142,21 +151,19 @@ docker run ... \
 
 ```
 s5gate/
-├── Dockerfile           # Docker 构建文件
-├── docker-compose.yml   # Docker Compose 配置
-├── entrypoint.sh        # 启动脚本
+├── Dockerfile
+├── docker-compose.yml
+├── stack.yml              # Portainer 部署配置
+├── entrypoint.sh
 ├── dante/
-│   └── danted.template.conf  # Dante 配置模板
+│   ├── danted-direct.template.conf  # 直连端口配置
+│   └── danted-vpn.template.conf     # VPN端口配置
 └── app/
-    ├── server.js        # Express 主服务
-    ├── vpngate.js       # VPNGate API 模块
-    ├── proxy-manager.js # 代理管理模块
+    ├── server.js
+    ├── vpngate.js
+    ├── proxy-manager.js
     ├── package.json
     └── public/
-        ├── index.html   # 主页面
-        ├── login.html   # 登录页
-        ├── style.css    # 样式
-        └── app.js       # 前端脚本
 ```
 
 ## 📝 许可证
