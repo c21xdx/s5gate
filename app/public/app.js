@@ -24,8 +24,8 @@ async function loadSocks5Config() {
     const data = await res.json();
     if (data.success) {
       socks5Config = data.config;
-      document.getElementById('socks5-host').textContent = window.location.hostname;
-      document.getElementById('socks5-port').textContent = socks5Config.port;
+      document.getElementById('socks5-port-direct').textContent = socks5Config.portDirect;
+      document.getElementById('socks5-port-vpn').textContent = socks5Config.portVPN;
       document.getElementById('socks5-user').textContent = socks5Config.user;
       document.getElementById('socks5-pass').textContent = socks5Config.pass;
     }
@@ -46,13 +46,14 @@ function togglePassword() {
 }
 
 // 复制 SOCKS5 配置
-function copySocks5Config() {
+function copySocks5Config(type) {
   if (!socks5Config) return;
   
-  const config = `socks5://${socks5Config.user}:${socks5Config.pass}@${window.location.hostname}:${socks5Config.port}`;
+  const port = type === 'vpn' ? socks5Config.portVPN : socks5Config.portDirect;
+  const config = `socks5://${socks5Config.user}:${socks5Config.pass}@${window.location.hostname}:${port}`;
   
   navigator.clipboard.writeText(config).then(() => {
-    alert('已复制到剪贴板');
+    alert(`已复制 ${type === 'vpn' ? 'VPN' : '直连'} SOCKS5 配置`);
   }).catch(err => {
     prompt('复制以下配置:', config);
   });
@@ -61,40 +62,46 @@ function copySocks5Config() {
 // 刷新状态
 async function refreshStatus() {
   try {
-    const [statusRes, ipRes] = await Promise.all([
-      fetch('/api/status'),
-      fetch('/api/ip-info')
-    ]);
-    
+    const statusRes = await fetch('/api/status');
     const statusData = await statusRes.json();
-    const ipData = await ipRes.json();
     
     if (statusData.success) {
       const status = statusData.status;
-      const modeEl = document.getElementById('current-mode');
-      const serverContainer = document.getElementById('server-info-container');
+      const vpn = status.vpn;
+      const connStatusEl = document.getElementById('vpn-conn-status');
+      const serverContainer = document.getElementById('vpn-server-container');
+      const ipContainer = document.getElementById('vpn-ip-container');
       const disconnectBtn = document.getElementById('btn-disconnect');
+      const vpnStatusEl = document.getElementById('vpn-status');
       
-      if (status.mode === 'vpn') {
-        modeEl.textContent = 'VPN 模式';
-        modeEl.className = 'mode-badge vpn';
+      if (vpn.connected) {
+        connStatusEl.textContent = '已连接';
+        connStatusEl.className = 'mode-badge vpn';
         serverContainer.style.display = 'block';
-        document.getElementById('current-server').textContent = 
-          `${status.server.hostName} (${status.server.countryShort})`;
+        ipContainer.style.display = 'block';
+        document.getElementById('vpn-server').textContent = 
+          `${vpn.server.hostName} (${vpn.server.countryShort})`;
         disconnectBtn.style.display = 'inline-block';
+        vpnStatusEl.textContent = `✅ ${vpn.server.countryShort}`;
+        vpnStatusEl.className = 'vpn-status connected';
+        
+        // 获取 VPN IP
+        try {
+          const ipRes = await fetch('/api/ip-info');
+          const ipData = await ipRes.json();
+          if (ipData.success && ipData.ipInfo) {
+            document.getElementById('vpn-ip').textContent = ipData.ipInfo.ip || '-';
+          }
+        } catch (e) {}
       } else {
-        modeEl.textContent = '直连模式';
-        modeEl.className = 'mode-badge direct';
+        connStatusEl.textContent = '未连接';
+        connStatusEl.className = 'mode-badge direct';
         serverContainer.style.display = 'none';
+        ipContainer.style.display = 'none';
         disconnectBtn.style.display = 'none';
+        vpnStatusEl.textContent = '未连接';
+        vpnStatusEl.className = 'vpn-status';
       }
-    }
-    
-    if (ipData.success && ipData.ipInfo) {
-      const ip = ipData.ipInfo;
-      document.getElementById('current-ip').textContent = ip.ip || '-';
-      document.getElementById('current-location').textContent = 
-        [ip.country, ip.region, ip.city].filter(Boolean).join(', ') || '-';
     }
   } catch (err) {
     console.error('Failed to refresh status:', err);
@@ -218,9 +225,9 @@ async function connectServer(server) {
   }
 }
 
-// 断开连接/切换到直连
+// 断开 VPN
 async function disconnect() {
-  if (!confirm('确认切换到直连模式?')) {
+  if (!confirm('确认断开 VPN?')) {
     return;
   }
   
@@ -229,13 +236,13 @@ async function disconnect() {
     const data = await res.json();
     
     if (data.success) {
-      alert('已切换到直连模式');
+      alert('VPN 已断开');
       refreshStatus();
     } else {
-      alert('切换失败: ' + data.error);
+      alert('断开失败: ' + data.error);
     }
   } catch (err) {
-    alert('切换失败: ' + err.message);
+    alert('断开失败: ' + err.message);
   }
 }
 

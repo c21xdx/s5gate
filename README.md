@@ -1,23 +1,23 @@
-# 🔐 S5Gate - SOCKS5 Proxy Gateway
+# 🔐 S5Gate - Dual SOCKS5 Proxy Gateway
 
-> 支持直连和 VPNGate 切换的 SOCKS5 代理网关
+> 同时提供直连和 VPNGate 两个 SOCKS5 代理端口
 
 ## ✨ 特性
 
-- ✅ **强密码认证** - SOCKS5 使用用户名密码认证，安全暴露公网
-- ✅ **双模式切换** - 直连模式 / VPNGate 模式
+- ✅ **双端口服务** - 直连 (1080) + VPN (1081) 同时运行
+- ✅ **强密码认证** - SOCKS5 使用用户名密码认证
 - ✅ **WebUI 管理** - 美观的网页管理界面
-- ✅ **Token 认证** - WebUI 使用 Token 登录
+- ✅ **VPNGate 节点** - 可切换全球免费 VPN 节点
 - ✅ **自动生成密码** - 启动时自动生成 24 位强密码
 
 ## 🌟 架构
 
 ```
-直连模式:
-客户端 -> SOCKS5 (Dante, 带认证) -> eth0 -> 本机网络
+端口 1080 (直连):
+客户端 -> SOCKS5 -> eth0 -> 本机网络
 
-VPN 模式:
-客户端 -> SOCKS5 (Dante, 带认证) -> tun0 -> VPNGate 节点
+端口 1081 (VPN):
+客户端 -> SOCKS5 -> tun0 -> VPNGate 节点
 ```
 
 ## 🚀 快速开始
@@ -31,15 +31,17 @@ version: '3.8'
 
 services:
   s5gate:
-    image: crazygao/s5gate:latest
+    image: c21xdx/s5gate:latest
     container_name: s5gate
     restart: unless-stopped
     ports:
       - "8080:8080"    # WebUI
-      - "1080:1080"    # SOCKS5
+      - "1080:1080"    # Direct SOCKS5
+      - "1081:1081"    # VPN SOCKS5
     environment:
       - PORT=8080
-      - SOCKS5_PORT=1080
+      - SOCKS5_PORT_DIRECT=1080
+      - SOCKS5_PORT_VPN=1081
       - SOCKS5_USER=s5user
       # - SOCKS5_PASS=YourStrongPassword123!  # 不设置则自动生成
       # - AUTH_TOKEN=your-webui-token         # 不设置则自动生成
@@ -70,7 +72,8 @@ docker run -d --name s5gate \
   --sysctl net.ipv4.ip_forward=1 \
   -p 8080:8080 \
   -p 1080:1080 \
-  crazygao/s5gate:latest
+  -p 1081:1081 \
+  c21xdx/s5gate:latest
 ```
 
 ## 🔑 认证配置

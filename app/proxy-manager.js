@@ -11,8 +11,8 @@ const http = require('http');
 const OVPN_CONFIG_PATH = '/etc/openvpn/openvpn.ovpn';
 const OVPN_DIR = path.dirname(OVPN_CONFIG_PATH);
 const CONFIG_PATH = '/run/s5gate/config.json';
-const DANTED_TEMPLATE = '/etc/danted.template.conf';
-const DANTED_CONF = '/etc/danted.conf';
+const DANTED_VPN_TEMPLATE = '/etc/danted-vpn.template.conf';
+const DANTED_VPN_CONF = '/etc/danted-vpn.conf';
 const BLACKLIST_PATH = '/run/s5gate/blacklist.json';
 
 // IP 黑名单
@@ -40,9 +40,9 @@ function getConfig() {
 // 保存原始网关
 let originalGateway = null;
 
-// 当前状态
-let currentStatus = {
-  mode: 'direct', // 'direct' 或 'vpn'
+// 当前 VPN 状态
+let vpnStatus = {
+  connected: false,
   server: null,
   connectedAt: null,
   error: null
@@ -54,7 +54,8 @@ let currentStatus = {
 function getSocks5Config() {
   const config = getConfig();
   return {
-    port: config.socks5Port,
+    portDirect: config.socks5PortDirect,
+    portVPN: config.socks5PortVPN,
     user: config.socks5User,
     pass: config.socks5Pass
   };
@@ -180,30 +181,40 @@ function setupBypassRoutes() {
 }
 
 /**
- * 重启 Dante（切换接口）
+ * 启动 VPN Dante
  */
-function restartDante(externalInterface) {
+function startVPNDante() {
   return new Promise((resolve, reject) => {
     const config = getConfig();
     
-    // 生成新配置
-    let template = fs.readFileSync(DANTED_TEMPLATE, 'utf-8');
-    template = template.replace(/\$\{SOCKS5_PORT\}/g, config.socks5Port);
-    template = template.replace(/\$\{EXTERNAL_INTERFACE\}/g, externalInterface);
-    fs.writeFileSync(DANTED_CONF, template);
+    // 生成 VPN Dante 配置
+    let template = fs.readFileSync(DANTED_VPN_TEMPLATE, 'utf-8');
+    template = template.replace(/\$\{SOCKS5_PORT_VPN\}/g, config.socks5PortVPN);
+    fs.writeFileSync(DANTED_VPN_CONF, template);
     
-    // 停止旧进程
-    exec('pkill danted 2>/dev/null || true', () => {
+    // 停止旧的 VPN Dante
+    exec('pkill -f "danted -f /etc/danted-vpn.conf" 2>/dev/null || true', () => {
       setTimeout(() => {
-        // 启动新进程
-        const dante = spawn('danted', ['-f', DANTED_CONF], {
+        const dante = spawn('danted', ['-f', DANTED_VPN_CONF], {
           detached: true,
           stdio: 'ignore'
         });
         dante.unref();
-        console.log(`[Dante] Restarted with external interface: ${externalInterface}`);
+        console.log(`[Dante] VPN SOCKS5 started on port ${config.socks5PortVPN}`);
         setTimeout(resolve, 500);
       }, 500);
+    });
+  });
+}
+
+/**
+ * 停止 VPN Dante
+ */
+function stopVPNDante() {
+  return new Promise((resolve) => {
+    exec('pkill -f "danted -f /etc/danted-vpn.conf" 2>/dev/null || true', () => {
+      console.log('[Dante] VPN SOCKS5 stopped');
+      setTimeout(resolve, 500);
     });
   });
 }
@@ -229,7 +240,7 @@ function startOpenVPN() {
       if (tunActive) {
         clearInterval(checkConnection);
         await setupBypassRoutes();
-        await restartDante('tun0');
+        await startVPNDante();
         resolve();
       } else if (attempts >= maxAttempts) {
         clearInterval(checkConnection);
@@ -240,11 +251,11 @@ function startOpenVPN() {
 }
 
 /**
- * 切换到 VPN 模式
+ * 连接 VPN 节点
  */
-async function switchToVPN(server, ovpnContent) {
+async function connectVPN(server, ovpnContent) {
   try {
-    currentStatus.error = null;
+    vpnStatus.error = null;
     
     await saveOriginalGateway();
     
@@ -252,6 +263,7 @@ async function switchToVPN(server, ovpnContent) {
     if (isRunning) {
       console.log('[OpenVPN] Stopping current connection...');
       await stopOpenVPN();
+      await stopVPNDante();
     }
     
     console.log(`[OpenVPN] Writing config for ${server.hostName} (${server.ip})...`);
@@ -260,8 +272,8 @@ async function switchToVPN(server, ovpnContent) {
     console.log('[OpenVPN] Starting OpenVPN...');
     await startOpenVPN();
     
-    currentStatus = {
-      mode: 'vpn',
+    vpnStatus = {
+      connected: true,
       server: {
         hostName: server.hostName,
         ip: server.ip,
@@ -275,36 +287,31 @@ async function switchToVPN(server, ovpnContent) {
     };
     
     console.log(`[OpenVPN] Connected to ${server.hostName} (${server.countryLong})`);
-    return currentStatus;
+    return vpnStatus;
     
   } catch (error) {
-    currentStatus.error = error.message;
+    vpnStatus.error = error.message;
     console.error('[OpenVPN] Error:', error.message);
     throw error;
   }
 }
 
 /**
- * 切换到直连模式
+ * 断开 VPN
  */
-async function switchToDirect() {
-  const config = getConfig();
-  
-  // 停止 OpenVPN
+async function disconnectVPN() {
   await stopOpenVPN();
+  await stopVPNDante();
   
-  // 重启 Dante 使用默认接口
-  await restartDante(config.defaultInterface);
-  
-  currentStatus = {
-    mode: 'direct',
+  vpnStatus = {
+    connected: false,
     server: null,
     connectedAt: null,
     error: null
   };
   
-  console.log('[Proxy] Switched to direct mode');
-  return currentStatus;
+  console.log('[VPN] Disconnected');
+  return vpnStatus;
 }
 
 /**
@@ -316,10 +323,13 @@ async function getStatus() {
   const config = getConfig();
   
   return {
-    ...currentStatus,
+    vpn: vpnStatus,
     processRunning: running,
     tunActive: tunActive,
-    defaultInterface: config.defaultInterface
+    ports: {
+      direct: config.socks5PortDirect,
+      vpn: config.socks5PortVPN
+    }
   };
 }
 
@@ -543,8 +553,8 @@ async function getConnections() {
 
 module.exports = {
   getSocks5Config,
-  switchToVPN,
-  switchToDirect,
+  connectVPN,
+  disconnectVPN,
   getStatus,
   getIPInfo,
   getConnections,

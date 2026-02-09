@@ -16,15 +16,26 @@
     <!-- SOCKS5 配置卡片 -->
     <div class="card socks5-card">
       <h2>📡 SOCKS5 配置</h2>
-      <div class="config-grid">
-        <div class="config-item">
-          <label>地址</label>
-          <span id="socks5-host">-</span>
+      <div class="dual-config">
+        <div class="config-box">
+          <h3>🌐 直连 (Direct)</h3>
+          <div class="config-item">
+            <label>端口</label>
+            <span id="socks5-port-direct">1080</span>
+          </div>
+          <button class="btn btn-small btn-copy" onclick="copySocks5Config('direct')">复制</button>
         </div>
-        <div class="config-item">
-          <label>端口</label>
-          <span id="socks5-port">-</span>
+        <div class="config-box vpn-box">
+          <h3>🔒 VPN</h3>
+          <div class="config-item">
+            <label>端口</label>
+            <span id="socks5-port-vpn">1081</span>
+          </div>
+          <div class="vpn-status" id="vpn-status">未连接</div>
+          <button class="btn btn-small btn-copy" onclick="copySocks5Config('vpn')">复制</button>
         </div>
+      </div>
+      <div class="config-common">
         <div class="config-item">
           <label>用户名</label>
           <span id="socks5-user">-</span>
@@ -35,7 +46,6 @@
           <button class="btn-small" onclick="togglePassword()">👁️</button>
         </div>
       </div>
-      <button class="btn btn-copy" onclick="copySocks5Config()">📋 复制配置</button>
     </div>
 
     <!-- 连接监控卡片 -->
@@ -64,30 +74,26 @@
       </div>
     </div>
 
-    <!-- 状态卡片 -->
+    <!-- VPN 状态卡片 -->
     <div class="card status-card">
-      <h2>📊 当前状态</h2>
+      <h2>🔒 VPN 状态</h2>
       <div class="status-grid">
         <div class="status-item">
-          <label>模式</label>
-          <span id="current-mode" class="mode-badge">-</span>
+          <label>状态</label>
+          <span id="vpn-conn-status" class="mode-badge">-</span>
         </div>
-        <div class="status-item">
-          <label>出口 IP</label>
-          <span id="current-ip">-</span>
-        </div>
-        <div class="status-item">
-          <label>位置</label>
-          <span id="current-location">-</span>
-        </div>
-        <div class="status-item" id="server-info-container" style="display:none">
+        <div class="status-item" id="vpn-server-container" style="display:none">
           <label>节点</label>
-          <span id="current-server">-</span>
+          <span id="vpn-server">-</span>
+        </div>
+        <div class="status-item" id="vpn-ip-container" style="display:none">
+          <label>VPN 出口 IP</label>
+          <span id="vpn-ip">-</span>
         </div>
       </div>
       <div class="status-actions">
-        <button class="btn btn-refresh" onclick="refreshStatus()">🔄 刷新状态</button>
-        <button class="btn btn-disconnect" id="btn-disconnect" onclick="disconnect()" style="display:none">❌ 切换到直连</button>
+        <button class="btn btn-refresh" onclick="refreshStatus()">🔄 刷新</button>
+        <button class="btn btn-disconnect" id="btn-disconnect" onclick="disconnect()" style="display:none">❌ 断开 VPN</button>
       </div>
     </div>
 

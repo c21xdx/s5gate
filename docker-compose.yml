@@ -7,13 +7,15 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"    # WebUI
-      - "1080:1080"    # SOCKS5
+      - "1080:1080"    # Direct SOCKS5
+      - "1081:1081"    # VPN SOCKS5
     environment:
       - PORT=8080
-      - SOCKS5_PORT=1080
+      - SOCKS5_PORT_DIRECT=1080
+      - SOCKS5_PORT_VPN=1081
       - SOCKS5_USER=s5user
-      # - SOCKS5_PASS=your-strong-password  # 不设置会自动生成
-      # - AUTH_TOKEN=your-webui-token       # WebUI 登录 token
+      # - SOCKS5_PASS=your-strong-password  # 不设置则自动生成
+      # - AUTH_TOKEN=your-webui-token       # 不设置则自动生成
     cap_add:
       - NET_ADMIN
     devices:

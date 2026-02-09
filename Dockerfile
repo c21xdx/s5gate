@@ -20,7 +20,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制 Dante 配置模板
-COPY dante/danted.template.conf /etc/danted.template.conf
+COPY dante/danted-direct.template.conf /etc/danted-direct.template.conf
+COPY dante/danted-vpn.template.conf /etc/danted-vpn.template.conf
 
 # 复制应用
 COPY app/ /app/
@@ -35,11 +36,12 @@ RUN chmod +x /entrypoint.sh
 
 # 环境变量
 ENV PORT=8080
-ENV SOCKS5_PORT=1080
+ENV SOCKS5_PORT_DIRECT=1080
+ENV SOCKS5_PORT_VPN=1081
 ENV SOCKS5_USER=s5user
 # SOCKS5_PASS 如果不设置会自动生成
 
 # 暴露端口
-EXPOSE 8080 1080
+EXPOSE 8080 1080 1081
 
 ENTRYPOINT ["/entrypoint.sh"]

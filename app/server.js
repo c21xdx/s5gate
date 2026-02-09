@@ -143,7 +143,7 @@ app.get('/api/servers', async (req, res) => {
   }
 });
 
-// API: 切换到 VPNGate 节点
+// API: 连接 VPNGate 节点
 app.post('/api/connect', async (req, res) => {
   try {
     const { hostName, ip, countryLong, countryShort, uptimeDays, uptimeHours, configBase64 } = req.body;
@@ -155,7 +155,7 @@ app.post('/api/connect', async (req, res) => {
     const ovpnContent = vpngate.decodeOvpnConfig(configBase64);
     const server = { hostName, ip, countryLong, countryShort, uptimeDays, uptimeHours };
     
-    const status = await proxyManager.switchToVPN(server, ovpnContent);
+    const status = await proxyManager.connectVPN(server, ovpnContent);
     res.json({ success: true, status });
   } catch (error) {
     console.error('[API] Error connecting:', error.message);
@@ -163,10 +163,10 @@ app.post('/api/connect', async (req, res) => {
   }
 });
 
-// API: 切换到直连模式
+// API: 断开 VPN
 app.post('/api/disconnect', async (req, res) => {
   try {
-    const status = await proxyManager.switchToDirect();
+    const status = await proxyManager.disconnectVPN();
     res.json({ success: true, status });
   } catch (error) {
     console.error('[API] Error disconnecting:', error.message);
@@ -240,12 +240,13 @@ app.listen(PORT, '0.0.0.0', () => {
   const config = proxyManager.getSocks5Config();
   console.log(`
 ========================================
-  S5Gate - SOCKS5 Proxy Gateway
+  S5Gate - Dual SOCKS5 Proxy Gateway
 ========================================
-  WebUI:      http://0.0.0.0:${PORT}
-  SOCKS5:     0.0.0.0:${config.port}
-  User:       ${config.user}
-  Pass:       ${config.pass}
+  WebUI:        http://0.0.0.0:${PORT}
+  Direct SOCKS5: 0.0.0.0:${config.portDirect}
+  VPN SOCKS5:    0.0.0.0:${config.portVPN} (after VPN connect)
+  User:          ${config.user}
+  Pass:          ${config.pass}
   
   🔐 WebUI Token: ${AUTH_TOKEN}
   
