@@ -26,7 +26,8 @@ function getConfig() {
       startupConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
     } catch (e) {
       startupConfig = {
-        socks5Port: process.env.SOCKS5_PORT || 1080,
+        socks5PortDirect: process.env.SOCKS5_PORT_DIRECT || 1080,
+        socks5PortVPN: process.env.SOCKS5_PORT_VPN || 1081,
         socks5User: process.env.SOCKS5_USER || 's5user',
         socks5Pass: process.env.SOCKS5_PASS || 'changeme',
         defaultInterface: 'eth0',
@@ -446,7 +447,9 @@ async function blockIP(ip) {
   // 使用 iptables 立即封禁
   return new Promise((resolve) => {
     const config = getConfig();
-    exec(`iptables -A INPUT -s ${ip} -p tcp --dport ${config.socks5Port} -j DROP`, (err) => {
+    const portDirect = config.socks5PortDirect;
+    const portVPN = config.socks5PortVPN;
+    exec(`iptables -A INPUT -s ${ip} -p tcp --dport ${portDirect} -j DROP && iptables -A INPUT -s ${ip} -p tcp --dport ${portVPN} -j DROP`, (err) => {
       if (err) {
         console.error(`[Blacklist] Failed to block ${ip}:`, err.message);
       } else {
@@ -467,7 +470,9 @@ async function unblockIP(ip) {
   // 使用 iptables 解除封禁
   return new Promise((resolve) => {
     const config = getConfig();
-    exec(`iptables -D INPUT -s ${ip} -p tcp --dport ${config.socks5Port} -j DROP`, (err) => {
+    const portDirect = config.socks5PortDirect;
+    const portVPN = config.socks5PortVPN;
+    exec(`iptables -D INPUT -s ${ip} -p tcp --dport ${portDirect} -j DROP; iptables -D INPUT -s ${ip} -p tcp --dport ${portVPN} -j DROP`, (err) => {
       if (err) {
         console.error(`[Blacklist] Failed to unblock ${ip}:`, err.message);
       } else {
@@ -494,7 +499,9 @@ async function applyBlacklist() {
   
   for (const ip of blacklist) {
     await new Promise((resolve) => {
-      exec(`iptables -A INPUT -s ${ip} -p tcp --dport ${config.socks5Port} -j DROP`, () => resolve());
+      const portDirect = config.socks5PortDirect;
+      const portVPN = config.socks5PortVPN;
+      exec(`iptables -A INPUT -s ${ip} -p tcp --dport ${portDirect} -j DROP; iptables -A INPUT -s ${ip} -p tcp --dport ${portVPN} -j DROP`, () => resolve());
     });
   }
   
@@ -512,10 +519,11 @@ setTimeout(applyBlacklist, 1000);
 async function getConnections() {
   return new Promise((resolve) => {
     const config = getConfig();
-    const port = config.socks5Port;
+    const portDirect = config.socks5PortDirect;
+    const portVPN = config.socks5PortVPN;
     
-    // 使用 ss 命令获取连接信息
-    exec(`ss -tn state established '( sport = :${port} )'`, (err, stdout) => {
+    // 使用 ss 命令获取两个端口的连接信息
+    exec(`ss -tn state established '( sport = :${portDirect} or sport = :${portVPN} )'`, (err, stdout) => {
       if (err) {
         resolve({ count: 0, clients: [] });
         return;
