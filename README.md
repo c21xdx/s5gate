@@ -34,6 +34,7 @@ services:
     image: c21xdx/s5gate:latest
     container_name: s5gate
     restart: unless-stopped
+    network_mode: bridge
     ports:
       - "8080:8080"    # WebUI
       - "1080:1080"    # Direct SOCKS5
