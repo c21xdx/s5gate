@@ -343,7 +343,58 @@ async function getStatus() {
 /**
  * 获取 IP 信息
  */
-async function getIPInfo() {
+/**
+ * 获取 IP 信息
+ * @param {string} ip - 可选，指定要查询的 IP，不提供则查询当前出口 IP
+ */
+async function getIPInfo(ip = null) {
+  // 如果提供了 IP，直接查询该 IP 的信息（不走 VPN）
+  if (ip) {
+    const services = [
+      {
+        url: `http://ip-api.com/json/${ip}?lang=zh-CN`,
+        parser: (data) => ({
+          ip: data.query,
+          country: data.country,
+          countryCode: data.countryCode,
+          region: data.regionName,
+          city: data.city,
+          isp: data.isp,
+          org: data.org
+        })
+      },
+      {
+        url: `http://ipwho.is/${ip}`,
+        parser: (data) => ({
+          ip: data.ip,
+          country: data.country,
+          countryCode: data.country_code,
+          region: data.region,
+          city: data.city,
+          isp: data.connection?.isp || data.isp,
+          org: data.connection?.org || data.org
+        })
+      }
+    ];
+    
+    for (const service of services) {
+      try {
+        const data = await fetchJSON(service.url, 10000);
+        if (data && data.status !== 'fail') {
+          const parsed = service.parser(data);
+          console.log(`[IPInfo] Got info for ${ip}: ${parsed.country}, ${parsed.isp}`);
+          return parsed;
+        }
+      } catch (error) {
+        console.log(`[IPInfo] Service failed for ${ip}: ${error.message}`);
+      }
+    }
+    
+    // 如果查询失败，返回基本信息
+    return { ip: ip, country: '-', isp: '-', org: '-' };
+  }
+  
+  // 没有提供 IP，查询当前出口 IP
   const services = [
     {
       url: 'http://ip-api.com/json/?lang=zh-CN',
@@ -368,23 +419,12 @@ async function getIPInfo() {
         isp: data.connection?.isp || data.isp,
         org: data.connection?.org || data.org
       })
-    },
-    {
-      url: 'https://ipinfo.io/json',
-      parser: (data) => ({
-        ip: data.ip,
-        country: data.country,
-        region: data.region,
-        city: data.city,
-        isp: data.org,
-        org: data.org
-      })
     }
   ];
   
   for (const service of services) {
     try {
-      const data = await fetchJSON(service.url, 15000);
+      const data = await fetchJSON(service.url, 10000);
       if (data) {
         const parsed = service.parser(data);
         console.log(`[IPInfo] Got IP info: ${parsed.ip} (${parsed.country})`);

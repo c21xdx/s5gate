@@ -177,7 +177,10 @@ app.post('/api/disconnect', async (req, res) => {
 // API: 获取 IP 信息
 app.get('/api/ip-info', async (req, res) => {
   try {
-    const ipInfo = await proxyManager.getIPInfo();
+    // 如果 VPN 已连接，用节点 IP 直接查询（不走 VPN 隧道，更快）
+    const status = await proxyManager.getStatus();
+    const vpnIP = status.vpn?.connected ? status.vpn.server?.ip : null;
+    const ipInfo = await proxyManager.getIPInfo(vpnIP);
     res.json({ success: true, ipInfo });
   } catch (error) {
     console.error('[API] Error getting IP info:', error.message);
