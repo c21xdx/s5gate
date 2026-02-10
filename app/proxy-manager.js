@@ -358,6 +358,18 @@ async function getIPInfo() {
       })
     },
     {
+      url: 'http://ipwho.is/',
+      parser: (data) => ({
+        ip: data.ip,
+        country: data.country,
+        countryCode: data.country_code,
+        region: data.region,
+        city: data.city,
+        isp: data.connection?.isp || data.isp,
+        org: data.connection?.org || data.org
+      })
+    },
+    {
       url: 'https://ipinfo.io/json',
       parser: (data) => ({
         ip: data.ip,
@@ -372,7 +384,7 @@ async function getIPInfo() {
   
   for (const service of services) {
     try {
-      const data = await fetchJSON(service.url, 5000);
+      const data = await fetchJSON(service.url, 15000);
       if (data) {
         const parsed = service.parser(data);
         console.log(`[IPInfo] Got IP info: ${parsed.ip} (${parsed.country})`);
