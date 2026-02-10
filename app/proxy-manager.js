@@ -238,7 +238,7 @@ function startOpenVPN() {
     openvpn.unref();
     
     let attempts = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 60;
     
     const checkConnection = setInterval(async () => {
       attempts++;
