@@ -55,6 +55,11 @@ S5Gate 是一个双端口 SOCKS5 代理网关服务，同时提供直连和 VPNG
 - 添加备用 IP 查询服务: ipwho.is
 - Portainer stack 使用 `network_mode: bridge`
 
+**功能迭代 7 - 超时优化**
+- OpenVPN 连接超时: 60s → 20s
+- IP 查询服务路由绕过 VPN (208.95.112.1 ip-api.com)
+- fetchJSON 超时处理优化，添加总超时定时器
+
 **部署准备**
 - 添加 GitHub Actions workflow（手动触发）
 - 支持多架构构建 (amd64/arm64)

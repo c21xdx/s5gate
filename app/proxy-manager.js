@@ -167,6 +167,9 @@ function setupBypassRoutes() {
         // VPNGate API 绕过 VPN
         `ip route add 130.158.75.0/24 via ${originalGateway} 2>/dev/null || true`,
         
+        // IP 查询服务绕过 VPN
+        `ip route add 208.95.112.1/32 via ${originalGateway} 2>/dev/null || true`,  // ip-api.com
+        
         // 私有网络绕过 VPN
         `ip route add 10.0.0.0/8 via ${originalGateway} 2>/dev/null || true`,
         `ip route add 172.16.0.0/12 via ${originalGateway} 2>/dev/null || true`,
@@ -238,7 +241,7 @@ function startOpenVPN() {
     openvpn.unref();
     
     let attempts = 0;
-    const maxAttempts = 60;
+    const maxAttempts = 20;
     
     const checkConnection = setInterval(async () => {
       attempts++;
@@ -438,15 +441,22 @@ async function getIPInfo(ip = null) {
   return { error: 'Failed to get IP info' };
 }
 
-function fetchJSON(url, timeout = 5000) {
+function fetchJSON(url, timeout = 8000) {
   return new Promise((resolve, reject) => {
     const isHttps = url.startsWith('https');
     const lib = isHttps ? https : http;
     
-    const req = lib.get(url, { timeout }, (res) => {
+    // 设置总超时定时器
+    const timeoutId = setTimeout(() => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    }, timeout);
+    
+    const req = lib.get(url, { timeout: timeout }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        clearTimeout(timeoutId);
         try {
           resolve(JSON.parse(data));
         } catch (e) {
@@ -455,8 +465,12 @@ function fetchJSON(url, timeout = 5000) {
       });
     });
     
-    req.on('error', reject);
+    req.on('error', (err) => {
+      clearTimeout(timeoutId);
+      reject(err);
+    });
     req.on('timeout', () => {
+      clearTimeout(timeoutId);
       req.destroy();
       reject(new Error('Timeout'));
     });
